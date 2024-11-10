@@ -1,5 +1,5 @@
 import * as React from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { IconCamera } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/api";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
 import moment from "moment";
+import { File } from "buffer";
+import { v4 as uuidv4 } from "uuid";
 
 export const Route = createFileRoute("/_authenticated/_public/add_expenses")({
   component: RouteComponent,
@@ -17,26 +18,31 @@ export const Route = createFileRoute("/_authenticated/_public/add_expenses")({
 interface FormState {
   vendorName: string;
   currency: "CAD" | "INR" | "USD";
-  amount: string;
+  amount: string | number;
+  type: string;
   dop: string;
+  receiptImage: File | null;
 }
 
 function RouteComponent() {
-  const [age, setAge] = useState<string>("");
+  const [isLoading, setLoading] = useState<boolean>(false);
   const receiptFileUploadRef = React.useRef(null);
   const dateInputRef = React.useRef(null);
   const [receiptImageURL, setReceiptImageURL] = useState<string | ArrayBuffer | null>(null);
   const [allVendorNames, setAllVendorNames] = useState<any[] | null>([]);
+  const [allTypeNames, setAllTypeNames] = useState<any[] | null>([]);
+
+  const navigate = useNavigate();
 
   const [formState, setFormState] = useState<FormState>({
     vendorName: "",
     currency: "CAD",
     amount: 0,
+    type: "",
     dop: moment().format("YYYY-MM-DD"),
+    receiptImage: null,
   });
-  console.log(new Date());
-  console.log(new Date().toISOString());
-  const { vendorName, amount, currency, dop } = formState;
+  const { vendorName, amount, currency, dop, type, receiptImage } = formState;
 
   const handleDateClick = () => {
     dateInputRef.current.click();
@@ -54,21 +60,56 @@ function RouteComponent() {
         setReceiptImageURL(reader.result);
       };
       reader.readAsDataURL(file);
+      setFormState({ ...formState, receiptImage: file });
     }
   };
 
-  const handleOptionClick = (e) => {
+  const handleVendorOptionClick = (e) => {
     setAllVendorNames([]);
     setFormState({ ...formState, vendorName: e.target.innerHTML });
   };
 
-  const handleAutoComplete = async (keyword: string) => {
+  const handleTypeOptionClick = (e) => {
+    setAllTypeNames([]);
+    setFormState({ ...formState, type: e.target.innerHTML });
+  };
+
+  const handleVendorAutoComplete = async (keyword: string) => {
     setFormState({ ...formState, vendorName: keyword });
     if (keyword === "") {
       setAllVendorNames([]);
     } else {
       const { data: vendors } = await supabase.from("Vendors").select("*").ilike("label", `%${keyword}%`);
       setAllVendorNames(vendors);
+    }
+  };
+
+  const handleTypeAutoComplete = async (keyword: string) => {
+    setFormState({ ...formState, type: keyword });
+    if (keyword === "") {
+      setAllTypeNames([]);
+    } else {
+      const { data: types } = await supabase.from("purchase_type").select("*").ilike("label", `%${keyword}%`);
+      console.log(types);
+      setAllTypeNames(types);
+    }
+  };
+
+  const handleSubmitExpenses = async (e) => {
+    try {
+      e.preventDefault();
+      setLoading(true);
+      const fileName = uuidv4();
+      const { data: image } = await supabase.storage.from("receipts").upload(fileName, receiptImage);
+      const { data: imageURL } = supabase.storage.from("receipts").getPublicUrl(image.path);
+      const { data, error } = await supabase
+        .from("expenses")
+        .insert([{ vendor_name: vendorName, type_purchase: type, dop: dop, currency: currency, amount: amount, img_url: imageURL.publicUrl }])
+        .select();
+      alert("Expense created Successfully");
+      navigate({ to: "/home" });
+    } catch (error) {
+      console.log(error.message);
     }
   };
 
@@ -99,12 +140,12 @@ function RouteComponent() {
         )}
 
         <div className="flex flex-col w-full max-w-sm  gap-2 relative">
-          <Label htmlFor="email">Vendor Name</Label>
-          <Input type="email" id="email" value={formState.vendorName} placeholder="" onChange={(e) => handleAutoComplete(e.currentTarget.value)} />
+          <Label htmlFor="vendor">Vendor Name</Label>
+          <Input type="text" id="vendor" autoComplete="off" value={formState.vendorName} placeholder="" onChange={(e) => handleVendorAutoComplete(e.currentTarget.value)} />
           {allVendorNames?.length > 0 && (
             <div className="absolute w-full left-0 top-full shadow-lg border bg-gray-100 rounded z-10 rounded-t-none -mt-1">
               {allVendorNames?.map((vendor) => (
-                <div key={vendor.label} className="text-sm hover:bg-slate-50 p-2 cursor-pointer" onClick={(e) => handleOptionClick(e)}>
+                <div key={vendor.label} className="text-sm hover:bg-slate-50 p-2 cursor-pointer" onClick={(e) => handleVendorOptionClick(e)}>
                   {vendor.label}
                 </div>
               ))}
@@ -112,8 +153,22 @@ function RouteComponent() {
           )}
         </div>
 
+        <div className="flex flex-col w-full max-w-sm  gap-2 relative">
+          <Label htmlFor="type">What is the Purchase</Label>
+          <Input type="text" id="type" autoComplete="off" value={formState.type} placeholder="" onChange={(e) => handleTypeAutoComplete(e.currentTarget.value)} />
+          {allTypeNames?.length > 0 && (
+            <div className="absolute w-full left-0 top-full shadow-lg border bg-gray-100 rounded z-10 rounded-t-none -mt-1">
+              {allTypeNames?.map((type) => (
+                <div key={type.label} className="text-sm hover:bg-slate-50 p-2 cursor-pointer" onClick={(e) => handleTypeOptionClick(e)}>
+                  {type.label}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="flex flex-col w-full max-w-sm gap-2">
-          <Label htmlFor="email">Cost of Purchase</Label>
+          <Label htmlFor="cost">Cost of Purchase</Label>
           <div className="flex gap-3">
             <Select onValueChange={(value: FormState["currency"]) => setFormState({ ...formState, currency: value })}>
               <SelectTrigger className="w-[130px]">
@@ -132,11 +187,13 @@ function RouteComponent() {
           <Label htmlFor="date">Date of purchase</Label>
           <Input ref={dateInputRef} type="date" id="date" placeholder="" value={formState.dop} onChange={(e) => setFormState({ ...formState, dop: e.currentTarget.value })} />
         </div>
-        <Button size={"lg"} className="mt-2">
-          Submit Expense
-        </Button>
+        {!isLoading && (
+          <Button size={"lg"} className="mt-2" onClick={(e) => handleSubmitExpenses(e)}>
+            Submit Expense
+          </Button>
+        )}
         <span>
-          {formState.vendorName}, {formState.currency} , {formState.amount}, {formState.dop}
+          {formState.vendorName}, {formState.type}, {formState.currency} , {formState.amount}, {formState.dop}
         </span>
       </form>
     </>
