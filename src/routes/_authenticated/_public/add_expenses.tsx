@@ -115,7 +115,6 @@ function RouteComponent() {
 
   return (
     <>
-      <h3 className="mb-4 text-3xl font-semibold text-center">Add Expense</h3>
       <form className="w-full border p-3 rounded flex flex-col gap-4">
         {!receiptImageURL && (
           <div className="p-12 bg-gray-200 flex justify-center border border-dashed border-gray-700 rounded cursor-pointer" onClick={handleReceiptUpload}>
@@ -192,9 +191,6 @@ function RouteComponent() {
             Submit Expense
           </Button>
         )}
-        <span>
-          {formState.vendorName}, {formState.type}, {formState.currency} , {formState.amount}, {formState.dop}
-        </span>
       </form>
     </>
   );
