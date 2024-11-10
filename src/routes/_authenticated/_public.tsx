@@ -8,7 +8,7 @@ export const Route = createFileRoute("/_authenticated/_public")({
 function RouteComponent() {
   return (
     <>
-      <div className="flex flex-col items-center mt-24">
+      <div className="flex flex-col items-center mt-6">
         <div className="max-w-[400px] flex flex-col gap-2 w-full px-4">
           <Outlet />
         </div>
