@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/api";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
+import moment from "moment";
 
 export const Route = createFileRoute("/_authenticated/_public/add_expenses")({
   component: RouteComponent,
@@ -16,7 +17,7 @@ export const Route = createFileRoute("/_authenticated/_public/add_expenses")({
 interface FormState {
   vendorName: string;
   currency: "CAD" | "INR" | "USD";
-  amount: number;
+  amount: string;
   dop: string;
 }
 
@@ -31,9 +32,10 @@ function RouteComponent() {
     vendorName: "",
     currency: "CAD",
     amount: 0,
-    dop: "1992",
+    dop: moment().format("YYYY-MM-DD"),
   });
-
+  console.log(new Date());
+  console.log(new Date().toISOString());
   const { vendorName, amount, currency, dop } = formState;
 
   const handleDateClick = () => {
@@ -55,41 +57,32 @@ function RouteComponent() {
     }
   };
 
-  React.useEffect(() => {
-    const loadVendorNames = async (keyword: string) => {
+  const handleOptionClick = (e) => {
+    setAllVendorNames([]);
+    setFormState({ ...formState, vendorName: e.target.innerHTML });
+  };
+
+  const handleAutoComplete = async (keyword: string) => {
+    setFormState({ ...formState, vendorName: keyword });
+    if (keyword === "") {
+      setAllVendorNames([]);
+    } else {
       const { data: vendors } = await supabase.from("Vendors").select("*").ilike("label", `%${keyword}%`);
       setAllVendorNames(vendors);
-    };
-    if (!vendorName) {
-      setAllVendorNames([]);
-      return;
-    } else {
-      loadVendorNames(formState.vendorName);
     }
-  }, [vendorName, formState.vendorName]);
+  };
 
   return (
     <>
       <h3 className="mb-4 text-3xl font-semibold text-center">Add Expense</h3>
       <form className="w-full border p-3 rounded flex flex-col gap-4">
         {!receiptImageURL && (
-          <div
-            className="p-12 bg-gray-200 flex justify-center border border-dashed border-gray-700 rounded cursor-pointer"
-            onClick={handleReceiptUpload}
-          >
+          <div className="p-12 bg-gray-200 flex justify-center border border-dashed border-gray-700 rounded cursor-pointer" onClick={handleReceiptUpload}>
             <span className="flex flex-col items-center gap-1 text-gray-500 select-none text-center">
               <IconCamera />
               Upload Receipt
             </span>
-            <input
-              ref={receiptFileUploadRef}
-              id="file-receipt"
-              className="hidden"
-              type="file"
-              accept="image/*"
-              capture
-              onChange={(e) => handleFileUpload(e)}
-            />
+            <input ref={receiptFileUploadRef} id="file-receipt" className="hidden" type="file" accept="image/*" capture onChange={(e) => handleFileUpload(e)} />
           </div>
         )}
         {receiptImageURL && (
@@ -107,21 +100,11 @@ function RouteComponent() {
 
         <div className="flex flex-col w-full max-w-sm  gap-2 relative">
           <Label htmlFor="email">Vendor Name</Label>
-          <Input
-            type="email"
-            id="email"
-            value={vendorName}
-            placeholder=""
-            onChange={(e) => setFormState({ ...formState, vendorName: e.currentTarget.value })}
-          />
+          <Input type="email" id="email" value={formState.vendorName} placeholder="" onChange={(e) => handleAutoComplete(e.currentTarget.value)} />
           {allVendorNames?.length > 0 && (
             <div className="absolute w-full left-0 top-full shadow-lg border bg-gray-100 rounded z-10 rounded-t-none -mt-1">
               {allVendorNames?.map((vendor) => (
-                <div
-                  key={vendor.label}
-                  className="text-sm hover:bg-slate-50 p-2 cursor-pointer"
-                  onClick={(e) => setFormState({ ...formState, vendorName: e.target.innerHTML })}
-                >
+                <div key={vendor.label} className="text-sm hover:bg-slate-50 p-2 cursor-pointer" onClick={(e) => handleOptionClick(e)}>
                   {vendor.label}
                 </div>
               ))}
@@ -132,26 +115,29 @@ function RouteComponent() {
         <div className="flex flex-col w-full max-w-sm gap-2">
           <Label htmlFor="email">Cost of Purchase</Label>
           <div className="flex gap-3">
-            <Select>
+            <Select onValueChange={(value: FormState["currency"]) => setFormState({ ...formState, currency: value })}>
               <SelectTrigger className="w-[130px]">
                 <SelectValue placeholder="CAD" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="light">CAD</SelectItem>
-                <SelectItem value="dark">USD</SelectItem>
-                <SelectItem value="system">INR</SelectItem>
+                <SelectItem value="CAD">CAD</SelectItem>
+                <SelectItem value="USD">USD</SelectItem>
+                <SelectItem value="INR">INR</SelectItem>
               </SelectContent>
             </Select>
-            <Input type="number" id="cost" placeholder="" />
+            <Input type="number" id="cost" placeholder="" onChange={(e) => setFormState({ ...formState, amount: Number(e.currentTarget.value).toFixed(2) })} />
           </div>
         </div>
         <div className="flex flex-col w-full max-w-sm  gap-2" onClick={handleDateClick}>
           <Label htmlFor="date">Date of purchase</Label>
-          <Input ref={dateInputRef} type="date" id="date" placeholder="" />
+          <Input ref={dateInputRef} type="date" id="date" placeholder="" value={formState.dop} onChange={(e) => setFormState({ ...formState, dop: e.currentTarget.value })} />
         </div>
         <Button size={"lg"} className="mt-2">
           Submit Expense
         </Button>
+        <span>
+          {formState.vendorName}, {formState.currency} , {formState.amount}, {formState.dop}
+        </span>
       </form>
     </>
   );
