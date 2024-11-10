@@ -1,7 +1,7 @@
 import * as React from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { IconCamera } from "@tabler/icons-react";
+import { IconCamera, IconChevronLeft } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -31,17 +31,19 @@ function RouteComponent() {
   const [receiptImageURL, setReceiptImageURL] = useState<string | ArrayBuffer | null>(null);
   const [allVendorNames, setAllVendorNames] = useState<any[] | null>([]);
   const [allTypeNames, setAllTypeNames] = useState<any[] | null>([]);
-
-  const navigate = useNavigate();
-
-  const [formState, setFormState] = useState<FormState>({
+  const [pageError, setPageError] = useState<string>("");
+  const defaultFormState: FormState = {
     vendorName: "",
     currency: "CAD",
     amount: 0,
     type: "",
     dop: moment().format("YYYY-MM-DD"),
     receiptImage: null,
-  });
+  };
+
+  const navigate = useNavigate();
+
+  const [formState, setFormState] = useState<FormState>(defaultFormState);
   const { vendorName, amount, currency, dop, type, receiptImage } = formState;
 
   const handleDateClick = () => {
@@ -75,7 +77,7 @@ function RouteComponent() {
   };
 
   const handleVendorAutoComplete = async (keyword: string) => {
-    setFormState({ ...formState, vendorName: keyword });
+    setFormState({ ...formState, vendorName: keyword.toLowerCase() });
     if (keyword === "") {
       setAllVendorNames([]);
     } else {
@@ -85,7 +87,7 @@ function RouteComponent() {
   };
 
   const handleTypeAutoComplete = async (keyword: string) => {
-    setFormState({ ...formState, type: keyword });
+    setFormState({ ...formState, type: keyword.toLowerCase() });
     if (keyword === "") {
       setAllTypeNames([]);
     } else {
@@ -96,12 +98,23 @@ function RouteComponent() {
   };
 
   const handleSubmitExpenses = async (e) => {
+    let imageURL: any = "";
     try {
       e.preventDefault();
       setLoading(true);
-      const fileName = uuidv4();
-      const { data: image } = await supabase.storage.from("receipts").upload(fileName, receiptImage);
-      const { data: imageURL } = supabase.storage.from("receipts").getPublicUrl(image.path);
+      if (!formState.vendorName && !formState.amount && !formState.currency && !formState.dop && !formState.type) {
+        setPageError("Please enter the missing fields");
+      }
+      if (receiptImage) {
+        const fileName = uuidv4();
+        const { data: image } = await supabase.storage.from("receipts").upload("/images/" + fileName, receiptImage);
+        const { data: imageURLServer } = supabase.storage.from("receipts").getPublicUrl(image.path);
+        imageURL = imageURLServer;
+      }
+      // Upserting Vendor and types
+      await supabase.from("Vendors").upsert({ label: vendorName.trim() }).select();
+      await supabase.from("purchase_type").upsert({ label: type.trim() }).select();
+
       const { data, error } = await supabase
         .from("expenses")
         .insert([{ vendor_name: vendorName, type_purchase: type, dop: dop, currency: currency, amount: amount, img_url: imageURL.publicUrl }])
@@ -109,20 +122,36 @@ function RouteComponent() {
       alert("Expense created Successfully");
       navigate({ to: "/home" });
     } catch (error) {
-      console.log(error.message);
+      setPageError(error.message);
     }
   };
 
   return (
     <>
+      {pageError && <p className="text-red-600 p-2 bg-red-100 rounded">Submission Failed : {pageError}</p>}
+      <Link to="/home" className="flex underline mb-1 py-2">
+        <IconChevronLeft /> Return to Home
+      </Link>
+
       <form className="w-full border p-3 rounded flex flex-col gap-4">
         {!receiptImageURL && (
-          <div className="p-12 bg-gray-200 flex justify-center border border-dashed border-gray-700 rounded cursor-pointer" onClick={handleReceiptUpload}>
+          <div
+            className="p-12 bg-gray-200 flex justify-center border border-dashed border-gray-700 rounded cursor-pointer"
+            onClick={handleReceiptUpload}
+          >
             <span className="flex flex-col items-center gap-1 text-gray-500 select-none text-center">
               <IconCamera />
               Upload Receipt
             </span>
-            <input ref={receiptFileUploadRef} id="file-receipt" className="hidden" type="file" accept="image/*" capture onChange={(e) => handleFileUpload(e)} />
+            <input
+              ref={receiptFileUploadRef}
+              id="file-receipt"
+              className="hidden"
+              type="file"
+              accept="image/*"
+              capture
+              onChange={(e) => handleFileUpload(e)}
+            />
           </div>
         )}
         {receiptImageURL && (
@@ -140,8 +169,15 @@ function RouteComponent() {
 
         <div className="flex flex-col w-full max-w-sm  gap-2 relative">
           <Label htmlFor="vendor">Vendor Name</Label>
-          <Input type="text" id="vendor" autoComplete="off" value={formState.vendorName} placeholder="" onChange={(e) => handleVendorAutoComplete(e.currentTarget.value)} />
-          {allVendorNames?.length > 0 && (
+          <Input
+            type="text"
+            id="vendor"
+            autoComplete="off"
+            value={formState.vendorName}
+            placeholder=""
+            onChange={(e) => handleVendorAutoComplete(e.currentTarget.value.toLowerCase())}
+          />
+          {allVendorNames && allVendorNames?.length > 0 && (
             <div className="absolute w-full left-0 top-full shadow-lg border bg-gray-100 rounded z-10 rounded-t-none -mt-1">
               {allVendorNames?.map((vendor) => (
                 <div key={vendor.label} className="text-sm hover:bg-slate-50 p-2 cursor-pointer" onClick={(e) => handleVendorOptionClick(e)}>
@@ -154,8 +190,15 @@ function RouteComponent() {
 
         <div className="flex flex-col w-full max-w-sm  gap-2 relative">
           <Label htmlFor="type">What is the Purchase</Label>
-          <Input type="text" id="type" autoComplete="off" value={formState.type} placeholder="" onChange={(e) => handleTypeAutoComplete(e.currentTarget.value)} />
-          {allTypeNames?.length > 0 && (
+          <Input
+            type="text"
+            id="type"
+            autoComplete="off"
+            value={formState.type}
+            placeholder=""
+            onChange={(e) => handleTypeAutoComplete(e.currentTarget.value)}
+          />
+          {allTypeNames && allTypeNames?.length > 0 && (
             <div className="absolute w-full left-0 top-full shadow-lg border bg-gray-100 rounded z-10 rounded-t-none -mt-1">
               {allTypeNames?.map((type) => (
                 <div key={type.label} className="text-sm hover:bg-slate-50 p-2 cursor-pointer" onClick={(e) => handleTypeOptionClick(e)}>
@@ -179,12 +222,25 @@ function RouteComponent() {
                 <SelectItem value="INR">INR</SelectItem>
               </SelectContent>
             </Select>
-            <Input type="number" id="cost" placeholder="" onChange={(e) => setFormState({ ...formState, amount: Number(e.currentTarget.value).toFixed(2) })} />
+            <Input
+              type="number"
+              id="cost"
+              placeholder=""
+              onChange={(e) => setFormState({ ...formState, amount: Number(e.currentTarget.value).toFixed(2) })}
+            />
           </div>
         </div>
         <div className="flex flex-col w-full max-w-sm  gap-2" onClick={handleDateClick}>
           <Label htmlFor="date">Date of purchase</Label>
-          <Input ref={dateInputRef} type="date" id="date" placeholder="" value={formState.dop} onChange={(e) => setFormState({ ...formState, dop: e.currentTarget.value })} />
+          <Input
+            ref={dateInputRef}
+            type="date"
+            id="date"
+            placeholder=""
+            value={formState.dop}
+            className="w-full"
+            onChange={(e) => setFormState({ ...formState, dop: e.currentTarget.value })}
+          />
         </div>
         {!isLoading && (
           <Button size={"lg"} className="mt-2" onClick={(e) => handleSubmitExpenses(e)}>
