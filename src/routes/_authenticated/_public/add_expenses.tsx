@@ -101,10 +101,11 @@ function RouteComponent() {
     let imageURL: any = "";
     try {
       e.preventDefault();
-      setLoading(true);
-      if (!formState.vendorName && !formState.amount && !formState.currency && !formState.dop && !formState.type) {
+      if (formState.vendorName === "" || formState.amount === 0 || formState.type === "") {
         setPageError("Please enter the missing fields");
+        return;
       }
+      setLoading(true);
       if (receiptImage) {
         const fileName = uuidv4();
         const { data: image } = await supabase.storage.from("receipts").upload("/images/" + fileName, receiptImage);
