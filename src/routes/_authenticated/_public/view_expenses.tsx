@@ -17,7 +17,9 @@ function ViewExpenses() {
     if (query === "") {
       setSearchedExpenses(expenses);
     } else {
-      setSearchedExpenses(expenses.filter((item) => String(item.vendor_name).includes(query) || String(item.purchase_type).includes(query)));
+      setSearchedExpenses(
+        expenses.filter((item) => String(item.vendor_name).includes(query.toLowerCase()) || String(item.purchase_type).includes(query.toLowerCase()))
+      );
     }
   };
 
