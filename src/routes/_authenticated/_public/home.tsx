@@ -13,7 +13,9 @@ function RouteComponent() {
       <Button className="mb-1" onClick={() => navigate({ to: "/add_expenses" })}>
         Add Expenses
       </Button>
-      <Button variant={"outline"}>View All Expenses</Button>
+      <Button variant={"outline"} onClick={() => navigate({ to: "/view_expenses" })}>
+        View All Expenses
+      </Button>
     </>
   );
 }

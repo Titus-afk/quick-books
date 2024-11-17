@@ -1,7 +1,7 @@
 import * as React from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { IconCamera, IconChevronLeft } from "@tabler/icons-react";
+import { IconCamera, IconChevronLeft, IconFidgetSpinner } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { supabase } from "@/api";
 import moment from "moment";
 import { File } from "buffer";
 import { v4 as uuidv4 } from "uuid";
+import Resizer from "react-image-file-resizer";
 
 export const Route = createFileRoute("/_authenticated/_public/add_expenses")({
   component: RouteComponent,
@@ -62,7 +63,21 @@ function RouteComponent() {
         setReceiptImageURL(reader.result);
       };
       reader.readAsDataURL(file);
-      setFormState({ ...formState, receiptImage: file });
+      // Image compression
+      Resizer.imageFileResizer(
+        file,
+        1200,
+        1200,
+        "JPEG",
+        85,
+        0,
+        (uri) => {
+          console.log(uri);
+          setFormState({ ...formState, receiptImage: uri });
+          reader.readAsDataURL(uri);
+        },
+        "file"
+      );
     }
   };
 
@@ -121,6 +136,7 @@ function RouteComponent() {
         .insert([{ vendor_name: vendorName, type_purchase: type, dop: dop, currency: currency, amount: amount, img_url: imageURL.publicUrl }])
         .select();
       alert("Expense created Successfully");
+      setLoading(false);
       navigate({ to: "/home" });
     } catch (error) {
       setPageError(error.message);
@@ -129,6 +145,15 @@ function RouteComponent() {
 
   return (
     <>
+      {isLoading && (
+        <div className="fixed top-0 left-0 bg-white w-svw flex justify-center text-center h-dvh z-20 items-center flex-col gap-4">
+          <IconFidgetSpinner className="animate-spin" />
+          <span>
+            Uploading Expenses <br />
+            Please Wait....
+          </span>
+        </div>
+      )}
       {pageError && <p className="text-red-600 p-2 bg-red-100 rounded">Submission Failed : {pageError}</p>}
       <Link to="/home" className="flex underline mb-1 py-2">
         <IconChevronLeft /> Return to Home
