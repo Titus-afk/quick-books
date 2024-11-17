@@ -12,6 +12,7 @@
 
 import { Route as rootRoute } from './routes/__root'
 import { Route as AuthenticatedPublicImport } from './routes/_authenticated/_public'
+import { Route as AuthenticatedPublicViewexpensesImport } from './routes/_authenticated/_public/view_expenses'
 import { Route as AuthenticatedPublicHomeImport } from './routes/_authenticated/_public/home'
 import { Route as AuthenticatedPublicAddexpensesImport } from './routes/_authenticated/_public/add_expenses'
 
@@ -21,6 +22,13 @@ const AuthenticatedPublicRoute = AuthenticatedPublicImport.update({
   id: '/_authenticated/_public',
   getParentRoute: () => rootRoute,
 } as any)
+
+const AuthenticatedPublicViewexpensesRoute =
+  AuthenticatedPublicViewexpensesImport.update({
+    id: '/view_expenses',
+    path: '/view_expenses',
+    getParentRoute: () => AuthenticatedPublicRoute,
+  } as any)
 
 const AuthenticatedPublicHomeRoute = AuthenticatedPublicHomeImport.update({
   id: '/home',
@@ -60,6 +68,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPublicHomeImport
       parentRoute: typeof AuthenticatedPublicImport
     }
+    '/_authenticated/_public/view_expenses': {
+      id: '/_authenticated/_public/view_expenses'
+      path: '/view_expenses'
+      fullPath: '/view_expenses'
+      preLoaderRoute: typeof AuthenticatedPublicViewexpensesImport
+      parentRoute: typeof AuthenticatedPublicImport
+    }
   }
 }
 
@@ -68,11 +83,13 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedPublicRouteChildren {
   AuthenticatedPublicAddexpensesRoute: typeof AuthenticatedPublicAddexpensesRoute
   AuthenticatedPublicHomeRoute: typeof AuthenticatedPublicHomeRoute
+  AuthenticatedPublicViewexpensesRoute: typeof AuthenticatedPublicViewexpensesRoute
 }
 
 const AuthenticatedPublicRouteChildren: AuthenticatedPublicRouteChildren = {
   AuthenticatedPublicAddexpensesRoute: AuthenticatedPublicAddexpensesRoute,
   AuthenticatedPublicHomeRoute: AuthenticatedPublicHomeRoute,
+  AuthenticatedPublicViewexpensesRoute: AuthenticatedPublicViewexpensesRoute,
 }
 
 const AuthenticatedPublicRouteWithChildren =
@@ -82,12 +99,14 @@ export interface FileRoutesByFullPath {
   '': typeof AuthenticatedPublicRouteWithChildren
   '/add_expenses': typeof AuthenticatedPublicAddexpensesRoute
   '/home': typeof AuthenticatedPublicHomeRoute
+  '/view_expenses': typeof AuthenticatedPublicViewexpensesRoute
 }
 
 export interface FileRoutesByTo {
   '': typeof AuthenticatedPublicRouteWithChildren
   '/add_expenses': typeof AuthenticatedPublicAddexpensesRoute
   '/home': typeof AuthenticatedPublicHomeRoute
+  '/view_expenses': typeof AuthenticatedPublicViewexpensesRoute
 }
 
 export interface FileRoutesById {
@@ -95,18 +114,20 @@ export interface FileRoutesById {
   '/_authenticated/_public': typeof AuthenticatedPublicRouteWithChildren
   '/_authenticated/_public/add_expenses': typeof AuthenticatedPublicAddexpensesRoute
   '/_authenticated/_public/home': typeof AuthenticatedPublicHomeRoute
+  '/_authenticated/_public/view_expenses': typeof AuthenticatedPublicViewexpensesRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '' | '/add_expenses' | '/home'
+  fullPaths: '' | '/add_expenses' | '/home' | '/view_expenses'
   fileRoutesByTo: FileRoutesByTo
-  to: '' | '/add_expenses' | '/home'
+  to: '' | '/add_expenses' | '/home' | '/view_expenses'
   id:
     | '__root__'
     | '/_authenticated/_public'
     | '/_authenticated/_public/add_expenses'
     | '/_authenticated/_public/home'
+    | '/_authenticated/_public/view_expenses'
   fileRoutesById: FileRoutesById
 }
 
@@ -135,7 +156,8 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/_public.tsx",
       "children": [
         "/_authenticated/_public/add_expenses",
-        "/_authenticated/_public/home"
+        "/_authenticated/_public/home",
+        "/_authenticated/_public/view_expenses"
       ]
     },
     "/_authenticated/_public/add_expenses": {
@@ -144,6 +166,10 @@ export const routeTree = rootRoute
     },
     "/_authenticated/_public/home": {
       "filePath": "_authenticated/_public/home.tsx",
+      "parent": "/_authenticated/_public"
+    },
+    "/_authenticated/_public/view_expenses": {
+      "filePath": "_authenticated/_public/view_expenses.tsx",
       "parent": "/_authenticated/_public"
     }
   }
