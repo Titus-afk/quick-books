@@ -26,7 +26,7 @@ function ViewExpenses() {
   useEffect(() => {
     const loadAllExpenses = async () => {
       let { data: expenses, error } = await supabase.from("expenses").select("*");
-      const sortedExpenses = expenses?.sort((a, b) => new Date(b.dop) - new Date(a.dop));
+      const sortedExpenses = expenses?.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       setExpenses(sortedExpenses);
       setSearchedExpenses(sortedExpenses);
     };

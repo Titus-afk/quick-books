@@ -1,7 +1,7 @@
 import * as React from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { IconCamera, IconChevronLeft, IconFidgetSpinner } from "@tabler/icons-react";
+import { IconArrowRight, IconCamera, IconChevronLeft, IconFidgetSpinner } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,10 @@ interface FormState {
   receiptImage: File | null;
 }
 
+const convertSizeToMB = (size) => {
+  return Math.round(size / 1024) > 1000 ? `${Math.round(size / (1024 * 1024))} MB` : `${Math.round(size / 1024)} KB`;
+};
+
 function RouteComponent() {
   const [isLoading, setLoading] = useState<boolean>(false);
   const receiptFileUploadRef = React.useRef(null);
@@ -33,6 +37,7 @@ function RouteComponent() {
   const [allVendorNames, setAllVendorNames] = useState<any[] | null>([]);
   const [allTypeNames, setAllTypeNames] = useState<any[] | null>([]);
   const [pageError, setPageError] = useState<string>("");
+  const [fileSize, setFileSize] = useState({ uploadSize: 0, compressedSize: 0 });
   const defaultFormState: FormState = {
     vendorName: "",
     currency: "CAD",
@@ -62,7 +67,7 @@ function RouteComponent() {
       reader.onloadend = () => {
         setReceiptImageURL(reader.result);
       };
-      reader.readAsDataURL(file);
+      setLoading(true);
       // Image compression
       Resizer.imageFileResizer(
         file,
@@ -72,7 +77,8 @@ function RouteComponent() {
         85,
         0,
         (uri) => {
-          console.log(uri);
+          setLoading(false);
+          setFileSize({ uploadSize: convertSizeToMB(file.size), compressedSize: convertSizeToMB(uri.size) });
           setFormState({ ...formState, receiptImage: uri });
           reader.readAsDataURL(uri);
         },
@@ -149,7 +155,7 @@ function RouteComponent() {
         <div className="fixed top-0 left-0 bg-white w-svw flex justify-center text-center h-dvh z-20 items-center flex-col gap-4">
           <IconFidgetSpinner className="animate-spin" />
           <span>
-            Uploading Expenses <br />
+            Uploading <br />
             Please Wait....
           </span>
         </div>
@@ -190,6 +196,10 @@ function RouteComponent() {
             <div className="max-h-[200px] overflow-auto border rounded">
               <img className="rounded" src={receiptImageURL} alt="" />
             </div>
+            <span className="text-sm mt-2 flex items-center">
+              Image compressed : &nbsp;<span className="text-sm rounded">{fileSize.uploadSize}</span>
+              <IconArrowRight size={18} /> <span className="bg-gray-200 text-sm rounded px-1">{fileSize.compressedSize}</span>
+            </span>
           </div>
         )}
 
