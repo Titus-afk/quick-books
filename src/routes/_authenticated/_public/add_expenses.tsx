@@ -113,7 +113,6 @@ function RouteComponent() {
       setAllTypeNames([]);
     } else {
       const { data: types } = await supabase.from("purchase_type").select("*").ilike("label", `%${keyword}%`);
-      console.log(types);
       setAllTypeNames(types);
     }
   };
