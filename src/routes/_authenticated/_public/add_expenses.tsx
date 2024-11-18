@@ -196,7 +196,7 @@ function RouteComponent() {
               <img className="rounded" src={receiptImageURL} alt="" />
             </div>
             <span className="text-sm mt-2 flex items-center">
-              Image compressed : &nbsp;<span className="text-sm rounded">{fileSize.uploadSize}</span>
+              <span className="text-sm rounded">{fileSize.uploadSize}</span>
               <IconArrowRight size={18} /> <span className="bg-gray-200 text-sm rounded px-1">{fileSize.compressedSize}</span>
             </span>
           </div>
